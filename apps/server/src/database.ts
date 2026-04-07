@@ -198,6 +198,16 @@ export class DatabaseService {
     }
   }
 
+  getFlagWithMessage(flagId: number): (Flag & SampledMessage) | null {
+    const stmt = this.db.prepare(`
+      SELECT f.*, m.channel, m.username, m.message_text, m.received_at, m.sampled_reason
+      FROM flags f
+      JOIN messages m ON f.message_id = m.id
+      WHERE f.id = ?
+    `);
+    return stmt.get(flagId) as (Flag & SampledMessage) | null;
+  }
+
   hasRecentFlag(messageHash: string): boolean {
     const stmt = this.db.prepare('SELECT 1 FROM messages WHERE id = ? LIMIT 1');
     return stmt.get(messageHash) !== undefined;

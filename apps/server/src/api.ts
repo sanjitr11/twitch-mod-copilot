@@ -1,6 +1,6 @@
 import express, { Router } from 'express';
 import { DatabaseService } from './database';
-import { ActionHandler, ActionType } from './action-handler';
+import { ActionHandler } from './action-handler';
 
 export function createApiRouter(db: DatabaseService, actionHandler: ActionHandler): Router {
   const router = express.Router();
@@ -66,31 +66,26 @@ export function createApiRouter(db: DatabaseService, actionHandler: ActionHandle
   });
 
   // POST /api/flags/:id/action
+  // Body: { username, channel }
+  // The action (ban / timeout / escalate) is now selected by the LLM based on
+  // the flag's violation context — no action field required from the caller.
   router.post('/flags/:id/action', async (req, res) => {
     try {
       const flagId = parseInt(req.params.id);
-      const { action, username, channel } = req.body;
+      const { username, channel } = req.body;
 
-      if (!action || !username || !channel) {
+      if (!username || !channel) {
         return res.status(400).json({
           success: false,
-          error: 'Missing required fields: action, username, channel',
+          error: 'Missing required fields: username, channel',
         });
       }
 
-      const validActions: ActionType[] = ['timeout_1h', 'timeout_24h', 'ban'];
-      if (!validActions.includes(action)) {
-        return res.status(400).json({
-          success: false,
-          error: 'Invalid action type',
-        });
-      }
-
-      await actionHandler.executeAction(flagId, action, username, channel);
+      await actionHandler.executeAction(flagId, username, channel);
 
       res.json({
         success: true,
-        message: `Action ${action} executed`,
+        message: `Action executed for flag ${flagId}`,
       });
     } catch (error) {
       console.error('[API] Error executing action:', error);

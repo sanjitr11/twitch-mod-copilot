@@ -181,6 +181,35 @@ export class TwitchApiMcpClient {
     }
   }
 
+  async listTools(): Promise<Array<{ name: string; description?: string; inputSchema: unknown }>> {
+    if (!this.connected || !this.client) {
+      return [];
+    }
+    const result = await this.client.listTools();
+    return result.tools.map((t) => ({
+      name: t.name,
+      description: t.description,
+      inputSchema: t.inputSchema,
+    }));
+  }
+
+  async callToolDynamic(
+    name: string,
+    args: Record<string, unknown>
+  ): Promise<{ success: boolean; error?: string; data?: unknown }> {
+    if (!this.connected || !this.client) {
+      throw new Error('MCP client not connected');
+    }
+    const result = await this.client.callTool({ name, arguments: args });
+    if (result.content && result.content.length > 0) {
+      const content = result.content[0];
+      if (content.type === 'text') {
+        return JSON.parse(content.text);
+      }
+    }
+    throw new Error('Unexpected response format from MCP server');
+  }
+
   isConnected(): boolean {
     return this.connected;
   }
